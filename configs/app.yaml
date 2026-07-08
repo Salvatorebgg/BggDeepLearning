@@ -1,0 +1,46 @@
+# ============================================================
+# BggDeepLearning 项目基础配置文件
+# 文件位置：configs/app.yaml
+# 作用：集中管理项目基础参数
+# ============================================================
+
+project:
+  name: "BggDeepLearning"
+  full_name: "面向临床研究的多语言多模态深度学习与智能决策支持平台"
+  version: "0.1.0"
+  author: "BggDeepLearning Team"
+  stage: "project_skeleton_initialization"
+  description: "A multi-language multimodal deep learning platform for clinical research."
+
+paths:
+  data_dir: "data"
+  raw_data_dir: "data/raw"
+  processed_data_dir: "data/processed"
+  simulated_data_dir: "data/simulated"
+
+  output_dir: "outputs"
+  log_dir: "outputs/logs"
+  figure_dir: "outputs/figures"
+  report_dir: "outputs/reports"
+  model_dir: "outputs/models"
+  table_dir: "outputs/tables"
+  prediction_dir: "outputs/predictions"
+
+clinical_task:
+  main_topic: "critical_care_poor_outcome_prediction"
+  outcome_name: "poor_outcome"
+  outcome_description: "是否发生严重不良临床结局"
+  positive_label: 1
+  negative_label: 0
+
+development:
+  language_main: "Python"
+  language_statistics: "R"
+  language_high_performance: "C/C++"
+  frontend: "React + TypeScript"
+  backend: "FastAPI"
+  database: "SQLite first, PostgreSQL later"
+
+logging:
+  level: "INFO"
+  log_file: "outputs/logs/bggdeep.log"

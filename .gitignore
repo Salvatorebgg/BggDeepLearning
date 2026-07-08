@@ -1,0 +1,153 @@
+# ============================================================
+# BggDeepLearning Git 忽略文件
+# 文件位置：.gitignore
+# 作用：告诉 Git 哪些文件不需要纳入版本管理
+# ============================================================
+
+
+# ----------------------------
+# Python 缓存文件
+# ----------------------------
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.egg
+*.egg-info/
+.eggs/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+
+# ----------------------------
+# Python 虚拟环境
+# ----------------------------
+.venv/
+venv/
+env/
+ENV/
+
+
+# ----------------------------
+# VS Code 本地配置
+# ----------------------------
+.vscode/
+
+
+# ----------------------------
+# 系统文件
+# ----------------------------
+.DS_Store
+Thumbs.db
+desktop.ini
+
+
+# ----------------------------
+# 日志文件
+# ----------------------------
+*.log
+outputs/logs/*.log
+outputs/logs/*.txt
+
+
+# ----------------------------
+# 临床数据文件
+# 注意：
+# 原始临床数据、模拟数据、处理后数据通常不直接提交到 Git。
+# 后面如果需要保留示例小数据，我们会单独放到 data/examples。
+# ----------------------------
+data/raw/*
+data/interim/*
+data/processed/*
+data/simulated/*
+data/external/*
+
+# 允许保留占位文件
+!data/raw/.gitkeep
+!data/interim/.gitkeep
+!data/processed/.gitkeep
+!data/simulated/.gitkeep
+!data/external/.gitkeep
+
+
+# ----------------------------
+# 输出结果
+# ----------------------------
+outputs/figures/*
+outputs/reports/*
+outputs/models/*
+outputs/tables/*
+outputs/predictions/*
+
+# 允许保留占位文件
+!outputs/figures/.gitkeep
+!outputs/reports/.gitkeep
+!outputs/models/.gitkeep
+!outputs/tables/.gitkeep
+!outputs/predictions/.gitkeep
+
+
+# ----------------------------
+# 数据库本地文件
+# ----------------------------
+*.db
+*.sqlite
+*.sqlite3
+database/sqlite/*.db
+database/sqlite/*.sqlite
+database/sqlite/*.sqlite3
+
+
+# ----------------------------
+# R 相关缓存
+# ----------------------------
+.Rhistory
+.RData
+.Rproj.user/
+
+
+# ----------------------------
+# C / C++ 编译结果
+# ----------------------------
+cpp/build/
+c/build/
+*.o
+*.obj
+*.dll
+*.lib
+*.exe
+*.pdb
+*.ilk
+
+
+# ----------------------------
+# 前端依赖和构建产物
+# ----------------------------
+node_modules/
+dist/
+build/
+frontend/node_modules/
+frontend/dist/
+frontend/build/
+
+
+# ----------------------------
+# 环境变量文件
+# ----------------------------
+.env
+.env.local
+.env.*.local
+
+# 允许保留示例环境变量文件
+!.env.example
+
+
+# ----------------------------
+# 临时文件
+# ----------------------------
+*.tmp
+*.temp
+*.bak
+*.backup
