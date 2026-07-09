@@ -54,6 +54,7 @@ MODEL_DISPLAY = {
     "gradient_boosting": "梯度提升模型 Gradient Boosting",
     "random_forest": "随机森林 Random Forest",
     "logistic": "逻辑回归 Logistic Regression",
+    "deep_mlp": "深度神经网络 Deep MLP (PyTorch)",
 }
 
 
@@ -1717,6 +1718,7 @@ def main() -> None:
             "gradient_boosting",
             "random_forest",
             "logistic",
+            "deep_mlp",
         ],
         format_func=lambda value: MODEL_DISPLAY.get(value, value),
     )

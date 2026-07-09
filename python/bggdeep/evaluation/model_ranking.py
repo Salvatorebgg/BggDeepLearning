@@ -84,6 +84,11 @@ class ModelLeaderboardBuilder:
                 "model_display_name": "Gradient Boosting",
                 "file_name": "gradient_boosting_baseline_metrics.csv",
             },
+            {
+                "model_group": "deep_learning",
+                "model_display_name": "Deep MLP (PyTorch)",
+                "file_name": "deep_mlp_baseline_metrics.csv",
+            },
         ]
 
         metric_tables = []

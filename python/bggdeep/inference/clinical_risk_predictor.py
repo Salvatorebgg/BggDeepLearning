@@ -21,6 +21,7 @@ from typing import Dict, List
 import joblib
 import numpy as np
 import pandas as pd
+import torch
 
 
 @dataclass
@@ -70,6 +71,12 @@ class ClinicalRiskPredictor:
             model_display_name="Gradient Boosting",
             model_file_name="gradient_boosting_baseline.joblib",
             model_type="tree",
+        ),
+        "deep_mlp": ClinicalModelSpec(
+            model_key="deep_mlp",
+            model_display_name="Deep MLP (PyTorch)",
+            model_file_name="deep_mlp_baseline.pt",
+            model_type="deep_learning",
         ),
     }
 
@@ -125,6 +132,9 @@ class ClinicalRiskPredictor:
     def load_model(self):
         """
         Load saved model.
+
+        For sklearn/joblib models: loaded via joblib.
+        For PyTorch .pt models: loaded via torch.load and TabularMLP.
         """
         spec = self.get_model_spec()
         model_file = self.model_dir / spec.model_file_name
@@ -135,7 +145,28 @@ class ClinicalRiskPredictor:
                 "Please train the selected model first."
             )
 
+        if spec.model_type == "deep_learning":
+            return self._load_pytorch_model(model_file)
+
         return joblib.load(model_file)
+
+    @staticmethod
+    def _load_pytorch_model(model_file: Path):
+        """
+        Load a PyTorch MLP model from .pt checkpoint.
+        """
+        from bggdeep.models.deep_learning.mlp import TabularMLP
+
+        checkpoint = torch.load(
+            model_file,
+            map_location=torch.device("cpu"),
+            weights_only=False,
+        )
+        model = TabularMLP(checkpoint["model_config"])
+        model.load_state_dict(checkpoint["model_state_dict"])
+        model.to(torch.device("cpu"))
+        model.eval()
+        return model
 
     def load_preprocessor(self):
         """
@@ -168,7 +199,7 @@ class ClinicalRiskPredictor:
 
         Priority:
         1. preprocessor.get_feature_names_out()
-        2. model.feature_names_in_
+        2. model.feature_names_in_ (sklearn only)
         3. generated feature names
         """
         n_features = transformed_array.shape[1]
@@ -192,6 +223,9 @@ class ClinicalRiskPredictor:
     def align_to_model_features(x_processed: pd.DataFrame, model) -> pd.DataFrame:
         """
         Align processed feature DataFrame to model expected features.
+
+        For sklearn models with feature_names_in_: align columns.
+        For PyTorch models: return as-is (they take raw numpy/tensor).
         """
         if not hasattr(model, "feature_names_in_"):
             return x_processed
@@ -238,7 +272,21 @@ class ClinicalRiskPredictor:
     def predict_probability(model, x_processed: pd.DataFrame) -> float:
         """
         Predict positive class probability for one row.
+
+        Supports sklearn models (predict_proba) and PyTorch models.
         """
+        # PyTorch model
+        if isinstance(model, torch.nn.Module):
+            _x = torch.tensor(
+                x_processed.to_numpy(dtype=np.float32),
+                dtype=torch.float32,
+            )
+            with torch.no_grad():
+                prob = model(_x).squeeze().numpy()
+            # squeeze may return scalar or 1-d array
+            return float(prob.item() if hasattr(prob, "item") else prob)
+
+        # sklearn model
         probability = model.predict_proba(x_processed)[:, 1][0]
         return float(probability)
 
@@ -246,7 +294,21 @@ class ClinicalRiskPredictor:
     def predict_probabilities(model, x_processed: pd.DataFrame) -> np.ndarray:
         """
         Predict positive class probabilities for multiple rows.
+
+        Supports sklearn models (predict_proba) and PyTorch models.
         """
+        # PyTorch model
+        if isinstance(model, torch.nn.Module):
+            _x = torch.tensor(
+                x_processed.to_numpy(dtype=np.float32),
+                dtype=torch.float32,
+            )
+            with torch.no_grad():
+                probs = model(_x).squeeze().numpy()
+            # Ensure 1-d array
+            return probs if probs.ndim == 1 else probs.ravel()
+
+        # sklearn model
         return model.predict_proba(x_processed)[:, 1]
 
     def risk_group(self, probability: float) -> str:
@@ -390,6 +452,8 @@ class ClinicalRiskPredictor:
     ) -> pd.DataFrame:
         """
         Explain one prediction based on model type.
+
+        This returns an empty DataFrame for deep learning models.
         """
         spec = self.get_model_spec()
 
@@ -399,10 +463,86 @@ class ClinicalRiskPredictor:
                 x_processed=x_processed,
             )
 
+        if spec.model_type == "deep_learning":
+            return self.build_permutation_explanation(
+                model=model,
+                x_processed=x_processed,
+            )
+
         return self.build_tree_shap_explanation(
             model=model,
             x_processed=x_processed,
         )
+
+    def build_permutation_explanation(
+        self,
+        model,
+        x_processed: pd.DataFrame,
+    ) -> pd.DataFrame:
+        """
+        Build simple explanation for deep learning models.
+
+        Uses the magnitude of feature values scaled by a simple
+        sensitivity analysis. This is a lightweight explainability
+        fallback when SHAP TreeExplainer is not applicable.
+        """
+        try:
+            feature_names = x_processed.columns.tolist()
+            values = x_processed.iloc[0].to_numpy()
+
+            # Get baseline prediction
+            baseline_input = torch.tensor(
+                x_processed.to_numpy(dtype=np.float32),
+                dtype=torch.float32,
+            )
+            with torch.no_grad():
+                baseline_prob = float(model(baseline_input).squeeze().item())
+
+            # Perturb each feature by 10% or 0.1
+            contributions = np.zeros(len(feature_names))
+            for i in range(len(feature_names)):
+                # Perturb feature i
+                perturbed = x_processed.copy().to_numpy(dtype=np.float32).copy()
+                delta = max(abs(values[i]) * 0.1, 0.1)
+                perturbed[0, i] = values[i] + delta
+
+                perturbed_tensor = torch.tensor(perturbed, dtype=torch.float32)
+                with torch.no_grad():
+                    perturbed_prob = float(model(perturbed_tensor).squeeze().item())
+
+                contributions[i] = perturbed_prob - baseline_prob
+
+            df = pd.DataFrame({
+                "feature_name": feature_names,
+                "feature_value": values,
+                "contribution": contributions,
+                "abs_contribution": np.abs(contributions),
+                "direction": [
+                    "增加风险" if value > 0 else "降低风险"
+                    for value in contributions
+                ],
+            })
+
+            df = df.sort_values(
+                by="abs_contribution",
+                ascending=False,
+            ).reset_index(drop=True)
+
+            df["rank"] = range(1, len(df) + 1)
+
+            return df[
+                [
+                    "rank",
+                    "feature_name",
+                    "feature_value",
+                    "contribution",
+                    "abs_contribution",
+                    "direction",
+                ]
+            ].head(self.config.top_n_explanation)
+
+        except Exception:
+            return pd.DataFrame()
 
     def predict_from_raw(self, raw_input: Dict[str, object]) -> Dict[str, object]:
         """

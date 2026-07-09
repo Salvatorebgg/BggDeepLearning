@@ -45,7 +45,7 @@ matplotlib>=3.8
 # ----------------------------
 
 # 深度学习，后面再单独安装
-# torch
+torch>=2.0
 # torchvision
 
 # 高级机器学习，后面再单独安装
@@ -56,11 +56,12 @@ matplotlib>=3.8
 # shap
 
 # 后端 API，后面再单独安装
-# fastapi
-# uvicorn
+fastapi>=0.110
+uvicorn>=0.30
+# jinja2
 
 # 报告生成，后面再单独安装
-# python-docx
+python-docx>=1.0
 # jinja2
 
 # 医学影像，后面再单独安装
